@@ -1,59 +1,54 @@
+import { Camera } from "./camera";
 import { Hittable } from "./hittable";
 import { Ray } from "./ray";
+import { clamp } from "./util";
 import { color, point3, Vec3 } from "./vec3";
 
-export function render(canvas: HTMLCanvasElement, world: Hittable) {
+export function* render(canvas: HTMLCanvasElement, world: Hittable): Generator<void, void, void> {
+  let prevTime = performance.now();
   const width = canvas.width;
   const height = canvas.height;
 
+  const samplePerPixel = 50;
+
   const aspectRatio = width / height;
 
-  console.log(width, height, aspectRatio);
-
-  const viewportHeight = 2;
-  const viewportWidth = aspectRatio * viewportHeight;
-  const focalLength = 1;
-
-  const origin: point3 = new Vec3(0, 0, 0);
-  const horizontal = new Vec3(viewportWidth, 0, 0);
-  const vertical = new Vec3(0, viewportHeight, 0);
-  const lowerLeftCorner =
-    origin.clone()
-      .sub(horizontal.clone().mul(1 / 2))
-      .sub(vertical.clone().mul(1 / 2))
-      .sub(new Vec3(0, 0, focalLength));
-
   const ctx = canvas.getContext('2d');
-
   if (ctx === null) {
     console.error('failed to get context');
     return;
   }
 
-  const data = ctx.createImageData(width, height);
+  const cam = new Camera(aspectRatio);
+
+  const data = ctx.getImageData(0, 0, width, height);
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      const u = x / width;
-      const v = 1 - y / height;
-      const ray = new Ray(
-        origin,
-        lowerLeftCorner.clone()
-          .add(horizontal.clone().mul(u))
-          .add(vertical.clone().mul(v))
-          .sub(origin)
-      );
-      const pixelColor = ray_color(ray, world);
-      const r = pixelColor.e[0];
-      const g = pixelColor.e[1];
-      const b = pixelColor.e[2];
+      const colorAcc = new Vec3(0, 0, 0);
+      for (let i = 0; i < samplePerPixel; i++) {
+        const u = (x + Math.random()) / width;
+        const v = 1 - (y + Math.random()) / height;
+        const ray = cam.getRay(u, v);
+        const color = ray_color(ray, world);
+        colorAcc.add(color);
+      }
+
+      const pixelColor = colorAcc.mul(1 / samplePerPixel);
+      const r = clamp(pixelColor.e[0], 0, 1);
+      const g = clamp(pixelColor.e[1], 0, 1);
+      const b = clamp(pixelColor.e[2], 0, 1);
       data.data[(y * width + x) * 4 + 0] = 255 * r;
       data.data[(y * width + x) * 4 + 1] = 255 * g;
       data.data[(y * width + x) * 4 + 2] = 255 * b;
       data.data[(y * width + x) * 4 + 3] = 255;
     }
+    const nowTime = performance.now();
+    if (15 < nowTime - prevTime) {
+      prevTime = nowTime;
+      ctx.putImageData(data, 0, 0);
+      yield;
+    }
   }
-
-  ctx.putImageData(data, 0, 0);
 }
 
 function ray_color(r: Ray, world: Hittable): color {
