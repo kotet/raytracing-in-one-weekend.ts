@@ -1,7 +1,8 @@
+import { Hittable } from "./hittable";
 import { Ray } from "./ray";
 import { color, point3, Vec3 } from "./vec3";
 
-export function render(canvas: HTMLCanvasElement) {
+export function render(canvas: HTMLCanvasElement, world: Hittable) {
   const width = canvas.width;
   const height = canvas.height;
 
@@ -29,11 +30,11 @@ export function render(canvas: HTMLCanvasElement) {
     return;
   }
 
-  let data = ctx.createImageData(width, height);
+  const data = ctx.createImageData(width, height);
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const u = x / width;
-      const v = y / height;
+      const v = 1 - y / height;
       const ray = new Ray(
         origin,
         lowerLeftCorner.clone()
@@ -41,7 +42,7 @@ export function render(canvas: HTMLCanvasElement) {
           .add(vertical.clone().mul(v))
           .sub(origin)
       );
-      const pixelColor = ray_color(ray);
+      const pixelColor = ray_color(ray, world);
       const r = pixelColor.e[0];
       const g = pixelColor.e[1];
       const b = pixelColor.e[2];
@@ -55,20 +56,13 @@ export function render(canvas: HTMLCanvasElement) {
   ctx.putImageData(data, 0, 0);
 }
 
-function ray_color(r: Ray): color {
-  if (hit_sphere(new Vec3(0, 0, -1), 0.5, r)) {
-    return new Vec3(1, 0, 0);
+function ray_color(r: Ray, world: Hittable): color {
+  const rec = world.hit(r, 0, 100);
+  if (rec !== null) {
+    const N = rec.normal;
+    return new Vec3(N.x() + 1, N.y() + 1, N.z() + 1).mul(0.5);
   }
   const unitDirection = r.direction().clone().normalize();
   const t = 0.5 * (unitDirection.y() + 1.0);
   return new Vec3(1, 1, 1).mul(1 - t).add(new Vec3(0.5, 0.7, 1.0).mul(t));
-}
-
-function hit_sphere(center: point3, radius: number, r: Ray): boolean {
-  const oc = r.origin().clone().sub(center);
-  const a = r.direction().dot(r.direction());
-  const b = 2 * oc.dot(r.direction());
-  const c = oc.dot(oc) - radius * radius;
-  const discriminant = b * b - 4 * a * c;
-  return discriminant > 0;
 }
