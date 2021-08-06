@@ -36,7 +36,8 @@ module.exports = {
   },
   plugins: [
     new HtmlWebpackPlugin({
-      title: 'Raytracer'
+      title: 'Raytracer',
+      minify: true
     }),
     new MiniCssExtractPlugin(),
   ]
