@@ -7,16 +7,20 @@ let canvas: HTMLCanvasElement;
   window.addEventListener('load', () => {
     const body = document.body;
     canvas = document.createElement('canvas');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
     body.appendChild(canvas);
     const nav = document.createElement('nav');
     const textarea = document.createElement('textarea');
     nav.appendChild(textarea);
     body.appendChild(nav);
-    renderingLoop();
+    render(canvas);
+    window.addEventListener('resize', onResize);
   });
 })();
 
-function renderingLoop() {
+function onResize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
   render(canvas);
-  requestAnimationFrame(renderingLoop);
 }

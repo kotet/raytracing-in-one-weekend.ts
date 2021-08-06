@@ -7,6 +7,8 @@ export function render(canvas: HTMLCanvasElement) {
 
   const aspectRatio = width / height;
 
+  console.log(width, height, aspectRatio);
+
   const viewportHeight = 2;
   const viewportWidth = aspectRatio * viewportHeight;
   const focalLength = 1;
@@ -54,7 +56,19 @@ export function render(canvas: HTMLCanvasElement) {
 }
 
 function ray_color(r: Ray): color {
+  if (hit_sphere(new Vec3(0, 0, -1), 0.5, r)) {
+    return new Vec3(1, 0, 0);
+  }
   const unitDirection = r.direction().clone().normalize();
   const t = 0.5 * (unitDirection.y() + 1.0);
   return new Vec3(1, 1, 1).mul(1 - t).add(new Vec3(0.5, 0.7, 1.0).mul(t));
+}
+
+function hit_sphere(center: point3, radius: number, r: Ray): boolean {
+  const oc = r.origin().clone().sub(center);
+  const a = r.direction().dot(r.direction());
+  const b = 2 * oc.dot(r.direction());
+  const c = oc.dot(oc) - radius * radius;
+  const discriminant = b * b - 4 * a * c;
+  return discriminant > 0;
 }
